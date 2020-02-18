@@ -14,8 +14,8 @@
  *   your object's keys or random transactions may fail.
  */
 export const encode = object => {
-  // Enter your solution here
-
+  const sortedJSON = JSON.stringify(object, Object.keys(object).sort());
+  return Buffer.from(sortedJSON);
 };
 
 /**
@@ -28,6 +28,7 @@ export const encode = object => {
  *   base64 string -> Buffer -> JSON string -> object
  */
 export const decode = base64Str => {
-  // Your code here
-
+  const buf = Buffer.from(base64Str, "base64");
+  const json = buf.toString("utf8");
+  return JSON.parse(json);
 };
