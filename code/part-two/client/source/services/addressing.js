@@ -1,12 +1,11 @@
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
-
-const NAMESPACE = '5f4d76';
+const NAMESPACE = "5f4d76";
 const PREFIXES = {
-  COLLECTION: '00',
-  MOJI: '01',
-  SIRE_LISTING: '02',
-  OFFER: '03'
+  COLLECTION: "00",
+  MOJI: "01",
+  SIRE_LISTING: "02",
+  OFFER: "03"
 };
 /**
  * A function which optionally takes a public key, and returns a full or
@@ -25,8 +24,19 @@ const PREFIXES = {
  *   // '5f4d7600ecd7ef459ec82a01211983551c3ed82169ca5fa0703ec98e17f9b534ffb797'
  */
 export const getCollectionAddress = (publicKey = null) => {
-  // Enter your solution here
+  const prefix = NAMESPACE + PREFIXES.COLLECTION;
 
+  if (publicKey === null) {
+    return prefix;
+  } else {
+    return (
+      prefix +
+      createHash("sha512")
+        .update(publicKey)
+        .digest("hex")
+        .slice(0, 62)
+    );
+  }
 };
 
 /**
@@ -42,8 +52,31 @@ export const getCollectionAddress = (publicKey = null) => {
  *   console.log(ownerPrefix);  // '5f4d7601ecd7ef45'
  */
 export const getMojiAddress = (ownerKey = null, dna = null) => {
-  // Your code here
+  const prefix = NAMESPACE + PREFIXES.MOJI;
 
+  if (ownerKey === null && dna === null) {
+    return prefix;
+  } else if (dna === null) {
+    return (
+      prefix +
+      createHash("sha512")
+        .update(ownerKey)
+        .digest("hex")
+        .slice(0, 8)
+    );
+  } else {
+    return (
+      prefix +
+      createHash("sha512")
+        .update(ownerKey)
+        .digest("hex")
+        .slice(0, 8) +
+      createHash("sha512")
+        .update(dna)
+        .digest("hex")
+        .slice(0, 54)
+    );
+  }
 };
 
 /**
@@ -54,8 +87,19 @@ export const getMojiAddress = (ownerKey = null, dna = null) => {
  * otherwise returns the full address.
  */
 export const getSireAddress = (ownerKey = null) => {
-  // Your code here
+  const prefix = NAMESPACE + PREFIXES.SIRE_LISTING;
 
+  if (ownerKey === null) {
+    return prefix;
+  } else {
+    return (
+      prefix +
+      createHash("sha512")
+        .update(ownerKey)
+        .digest("hex")
+        .slice(0, 62)
+    );
+  }
 };
 
 /**
@@ -72,5 +116,4 @@ export const getSireAddress = (ownerKey = null) => {
  */
 export const getOfferAddress = (ownerKey = null, moji = null) => {
   // Your code here
-
 };
