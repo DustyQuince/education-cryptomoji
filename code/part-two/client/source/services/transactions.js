@@ -4,15 +4,14 @@ import {
   Batch,
   BatchHeader,
   BatchList
-} from 'sawtooth-sdk/protobuf';
-import { createHash } from 'crypto';
-import { getPublicKey, sign } from './signing.js';
-import { encode } from './encoding.js';
+} from "sawtooth-sdk/protobuf";
+import { createHash, randomBytes } from "crypto";
+import { getPublicKey, sign } from "./signing.js";
+import { encode } from "./encoding.js";
 
-
-const FAMILY_NAME = 'cryptomoji';
-const FAMILY_VERSION = '0.1';
-const NAMESPACE = '5f4d76';
+const FAMILY_NAME = "cryptomoji";
+const FAMILY_VERSION = "0.1";
+const NAMESPACE = "5f4d76";
 
 /**
  * A function that takes a private key and a payload and returns a new
@@ -28,8 +27,27 @@ const NAMESPACE = '5f4d76';
  *   Also, don't forget to encode your payload!
  */
 export const createTransaction = (privateKey, payload) => {
-  // Enter your solution here
+  const transactionHeaderBytes = TransactionHeader.encode({
+    familyName: FAMILY_NAME,
+    familyVersion: FAMILY_VERSION,
+    inputs: [NAMESPACE],
+    outputs: [NAMESPACE],
+    signerPublicKey: getPublicKey(privateKey),
+    batcherPublicKey: getPublicKey(privateKey),
+    dependencies: [],
+    nonce: randomBytes(32).toString("hex"),
+    payloadSha512: createHash("sha512")
+      .update(encode(payload))
+      .digest("hex")
+  }).finish();
 
+  const headerSignature = sign(privateKey, transactionHeaderBytes);
+
+  return Transaction.create({
+    header: transactionHeaderBytes,
+    headerSignature: headerSignature,
+    payload: encode(payload)
+  });
 };
 
 /**
@@ -40,8 +58,22 @@ export const createTransaction = (privateKey, payload) => {
  * transaction with no array.
  */
 export const createBatch = (privateKey, transactions) => {
-  // Your code here
+  if (transactions.length === undefined) {
+    transactions = [transactions];
+  }
 
+  const batchHeaderBytes = BatchHeader.encode({
+    signerPublicKey: getPublicKey(privateKey),
+    transactionIds: transactions.map(txn => txn.headerSignature)
+  }).finish();
+
+  const batchSignature = sign(privateKey, batchHeaderBytes);
+
+  return Batch.create({
+    header: batchHeaderBytes,
+    headerSignature: batchSignature,
+    transactions: transactions
+  });
 };
 
 /**
@@ -54,7 +86,7 @@ export const createBatch = (privateKey, transactions) => {
  */
 export const encodeBatches = batches => {
   if (!Array.isArray(batches)) {
-    batches = [ batches ];
+    batches = [batches];
   }
   const batchList = BatchList.encode({ batches }).finish();
 
@@ -73,6 +105,13 @@ export const encodeBatches = batches => {
  * multiple payloads in an array.
  */
 export const encodeAll = (privateKey, payloads) => {
-  // Your code here
+  if (payloads.length === undefined) {
+    payloads = [payloads];
+  }
 
+  const transactions = payloads.map(payload =>
+    createTransaction(privateKey, payload)
+  );
+  const batch = createBatch(privateKey, transactions);
+  return encodeBatches(batch);
 };
