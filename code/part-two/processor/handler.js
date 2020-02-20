@@ -5,7 +5,8 @@ const { InvalidTransaction } = require("sawtooth-sdk/processor/exceptions");
 const { decode, encode } = require("./services/encoding");
 const {
   getCollectionAddress,
-  getMojiAddress
+  getMojiAddress,
+  getSireAddress
 } = require("./services/addressing.js");
 const getPrng = require("./services/prng.js");
 const { createHash } = require("crypto");
@@ -54,31 +55,78 @@ class MojiHandler extends TransactionHandler {
   apply(txn, context) {
     const signer = txn.header.signerPublicKey;
     const payload = decode(txn.payload);
+    const update = {};
+
     switch (payload.action) {
       case "CREATE_COLLECTION":
-        const addr = getCollectionAddress(signer);
-        return context
-          .getState([addr])
-          .then(state => {
-            if (state[addr].length !== 0) {
-              throw new Error("This address already has a collection.");
-            }
-          })
-          .then(() => {
-            const update = {};
-            const stateResources = {
-              key: signer,
-              moji: this.makeMoji(signer, context, txn.signature, null, null, 3)
-            };
-            update[addr] = encode(stateResources);
-            return context.setState(update);
-          })
-          .catch(err => {
-            throw new InvalidTransaction(err);
-          });
+        const collectionAddr = getCollectionAddress(signer);
+        // check if address already has an associated collection
+        return (
+          context
+            .getState([collectionAddr])
+            .then(state => {
+              if (state[collectionAddr].length !== 0) {
+                throw new Error("This address already has a collection.");
+              }
+            })
+            // if not, create an update object making three moji and hold their addresses in moji
+            .then(() => {
+              const stateResources = {
+                key: signer,
+                moji: this.makeMoji(
+                  signer,
+                  context,
+                  txn.signature,
+                  null,
+                  null,
+                  3
+                )
+              };
+              update[collectionAddr] = encode(stateResources);
+              return context.setState(update);
+            })
+            // throw an InvalidTransaction exception in case of a collection already existing
+            .catch(err => {
+              throw new InvalidTransaction(err);
+            })
+        );
         break;
 
       case "SELECT_SIRE":
+        const ownersCollection = getCollectionAddress(signer);
+        const sireListingAddr = getSireAddress(signer);
+        const sireMojiAddr = payload.sire;
+        const sireState = { owner: signer, sire: payload.sire };
+        update[sireListingAddr] = encode(sireState);
+
+        // return context.setState(update);
+
+        return context
+          .getState([ownersCollection])
+          .then(state => {
+            if (state[ownersCollection].length === 0) {
+              throw new Error("No collection found");
+            }
+
+            return context.getState([sireMojiAddr]);
+          })
+          .then(mojiState => {
+            if (mojiState.length === 0) {
+              throw new Error("The selected sire doesn't exist");
+            }
+            const mojiDecoded = decode(mojiState[sireMojiAddr]);
+            if (mojiDecoded.owner !== signer) {
+              throw new Error("You don't own the selected sire");
+            }
+          })
+          .then(() => {
+            return context.setState(update);
+          })
+          .then(addresses => addresses)
+          .catch(err => {
+            // console.error(err);
+            throw new InvalidTransaction(err);
+          });
         break;
 
       case "BREED_MOJI":
