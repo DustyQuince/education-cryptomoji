@@ -1,14 +1,13 @@
-'use strict';
+"use strict";
 
-const { createHash } = require('crypto');
+const { createHash } = require("crypto");
 
-
-const NAMESPACE = '5f4d76';
+const NAMESPACE = "5f4d76";
 const PREFIXES = {
-  COLLECTION: '00',
-  MOJI: '01',
-  SIRE_LISTING: '02',
-  OFFER: '03'
+  COLLECTION: "00",
+  MOJI: "01",
+  SIRE_LISTING: "02",
+  OFFER: "03"
 };
 
 /**
@@ -24,8 +23,16 @@ const PREFIXES = {
  *   // '5f4d7600ecd7ef459ec82a01211983551c3ed82169ca5fa0703ec98e17f9b534ffb797'
  */
 const getCollectionAddress = publicKey => {
-  // Enter your solution here
+  const prefix = NAMESPACE + PREFIXES.COLLECTION;
+  console.log(typeof publicKey, publicKey);
 
+  return (
+    prefix +
+    createHash("sha512")
+      .update(publicKey)
+      .digest("hex")
+      .slice(0, 62)
+  );
 };
 
 /**
@@ -34,7 +41,19 @@ const getCollectionAddress = publicKey => {
  */
 const getMojiAddress = (ownerKey, dna) => {
   // Your code here
+  const prefix = NAMESPACE + PREFIXES.MOJI;
 
+  return (
+    prefix +
+    createHash("sha512")
+      .update(ownerKey)
+      .digest("hex")
+      .slice(0, 8) +
+    createHash("sha512")
+      .update(dna)
+      .digest("hex")
+      .slice(0, 54)
+  );
 };
 
 /**
@@ -42,8 +61,15 @@ const getMojiAddress = (ownerKey, dna) => {
  * listing address.
  */
 const getSireAddress = ownerKey => {
-  // Your code here
+  const prefix = NAMESPACE + PREFIXES.SIRE_LISTING;
 
+  return (
+    prefix +
+    createHash("sha512")
+      .update(ownerKey)
+      .digest("hex")
+      .slice(0, 62)
+  );
 };
 
 /**
@@ -59,7 +85,6 @@ const getSireAddress = ownerKey => {
  */
 const getOfferAddress = (ownerKey, addresses) => {
   // Your code here
-
 };
 
 /**
@@ -75,8 +100,13 @@ const getOfferAddress = (ownerKey, addresses) => {
  *   console.log(isValid);  // false
  */
 const isValidAddress = address => {
-  // Your code here
+  const re = /^5f4d76[0-9a-f]{64}$/;
 
+  if (typeof address !== "string" || address.match(re) === null) {
+    return false;
+  } else {
+    return true;
+  }
 };
 
 module.exports = {

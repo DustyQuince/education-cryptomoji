@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * A function that takes an object and returns it encoded as JSON Buffer.
@@ -16,8 +16,8 @@
  *   your object's keys or random transactions may fail.
  */
 const encode = object => {
-  // Enter your solution here
-
+  const sortedJSON = JSON.stringify(object, Object.keys(object).sort());
+  return Buffer.from(sortedJSON);
 };
 
 /**
@@ -25,8 +25,8 @@ const encode = object => {
  * the client version, there is no need to handle base64 strings.
  */
 const decode = buffer => {
-  // Your code here
-
+  const json = buffer.toString("utf8");
+  return JSON.parse(json);
 };
 
 module.exports = {

@@ -54,12 +54,19 @@ class MojiHandler extends TransactionHandler {
    */
   apply(txn, context) {
     const signer = txn.header.signerPublicKey;
-    const payload = decode(txn.payload);
-    const update = {};
+    let payload;
+    try {
+      payload = decode(txn.payload);
+    } catch (e) {
+      throw new InvalidTransaction(e);
+    }
+    const collectionAddr = getCollectionAddress(signer);
+    const sireMojiAddr = payload.sire;
+    const breederMojiAddr = payload.breeder;
+    let update = {};
 
     switch (payload.action) {
       case "CREATE_COLLECTION":
-        const collectionAddr = getCollectionAddress(signer);
         // check if address already has an associated collection
         return (
           context
@@ -93,18 +100,16 @@ class MojiHandler extends TransactionHandler {
         break;
 
       case "SELECT_SIRE":
-        const ownersCollection = getCollectionAddress(signer);
         const sireListingAddr = getSireAddress(signer);
-        const sireMojiAddr = payload.sire;
         const sireState = { owner: signer, sire: payload.sire };
         update[sireListingAddr] = encode(sireState);
 
         // return context.setState(update);
 
         return context
-          .getState([ownersCollection])
+          .getState([collectionAddr])
           .then(state => {
-            if (state[ownersCollection].length === 0) {
+            if (state[collectionAddr].length === 0) {
               throw new Error("No collection found");
             }
 
@@ -130,8 +135,87 @@ class MojiHandler extends TransactionHandler {
         break;
 
       case "BREED_MOJI":
+        let sireListing, newMojiAddresses, sireDecoded, breederDecoded;
+        return context
+          .getState([collectionAddr])
+          .then(state => {
+            if (state[collectionAddr].length === 0) {
+              throw new Error("No collection found");
+            }
+            return context.getState([sireMojiAddr]);
+          })
+          .then(mojiState => {
+            if (mojiState.length === 0) {
+              throw new Error("The selected sire doesn't exist");
+            }
+            sireDecoded = decode(mojiState[sireMojiAddr]);
+            return sireDecoded.owner;
+          })
+          .then(sireOwner => {
+            sireListing = getSireAddress(sireOwner);
+            return context.getState([sireListing]);
+          })
+          .then(sireListingState => {
+            const sireListingDecoded = decode(sireListingState[sireListing]);
+            if (sireListingDecoded.sire !== sireMojiAddr) {
+              throw new Error(
+                "Your selection for sire is not available for siring"
+              );
+            }
+            return context.getState([breederMojiAddr]);
+          })
+          .then(breederState => {
+            if (breederState.length === 0) {
+              throw new Error("Your breeder doesn't exist");
+            }
+            breederDecoded = decode(breederState[breederMojiAddr]);
+            if (breederDecoded.owner !== signer) {
+              throw new Error("You don't own the selected breeder");
+            }
+            return this.makeMoji(
+              signer,
+              context,
+              txn.signature,
+              sireMojiAddr,
+              breederMojiAddr,
+              1
+            );
+          })
+          .then(mojiAddresses => {
+            newMojiAddresses = mojiAddresses;
+            return context.getState([collectionAddr]);
+          })
+          .then(collectionState => {
+            const collectionDecoded = decode(collectionState[collectionAddr]);
+            collectionDecoded.moji = collectionDecoded.moji.concat(
+              newMojiAddresses
+            );
+            update = {};
+            update[collectionAddr] = encode({
+              key: signer,
+              moji: collectionDecoded.moji
+            });
+            return context.setState(update);
+          })
+          .then(addressUpdated => {
+            breederDecoded.bred = breederDecoded.bred.concat(newMojiAddresses);
+            update = {};
+            update[breederMojiAddr] = encode(breederDecoded);
+            return context.setState(update);
+          })
+          .then(breederAddress => {
+            sireDecoded.sired = sireDecoded.sired.concat(newMojiAddresses);
+            update = {};
+            update[sireMojiAddr] = encode(sireDecoded);
+            return context.setState(update);
+          })
+          .catch(err => {
+            // console.error(err);
+            throw new InvalidTransaction(err);
+          });
         break;
       default:
+        throw new InvalidTransaction("Payload action not understood");
         break;
     }
   }
