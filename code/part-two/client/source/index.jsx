@@ -1,11 +1,15 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import { BrowserRouter } from 'react-router-dom';
+import React from "react";
+import ReactDOM from "react-dom";
+import { BrowserRouter } from "react-router-dom";
+import { Provider } from "react-redux";
+import App from "./components/App.jsx";
+import store from "./store";
 
-
-ReactDOM.render((
+ReactDOM.render(
   <BrowserRouter>
-    <h1>Hello, Cryptomoji!</h1>
-  </BrowserRouter>
-), document.getElementById('app'));
-
+    <Provider store={store}>
+      <App />
+    </Provider>
+  </BrowserRouter>,
+  document.getElementById("app")
+);
