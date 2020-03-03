@@ -1,6 +1,6 @@
 import React from "react";
 import LoggedInApp from "./LoggedInApp.jsx";
-import Login from "./Login.jsx";
+import LoginContainer from "../containers/LoginContainer.js";
 
 const App = props => {
   // if user has defined a private key, treat them as logged in
@@ -17,7 +17,7 @@ const App = props => {
   if (isLoggedIn) {
     return <LoggedInApp user_priv_key={user_priv_key} />;
   } else {
-    return <Login />;
+    return <LoginContainer />;
   }
 };
 
