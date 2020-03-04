@@ -1,9 +1,5 @@
 import { combineReducers } from "redux";
-import { privateKey } from "./privateKey.js";
-
-const placeholder = (state = {}, action) => {
-  return state;
-};
+import privateKey from "./privateKey.js";
 
 const rootReducer = combineReducers({
   privateKey: privateKey

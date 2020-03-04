@@ -2,12 +2,12 @@ import Login from "../components/Login.jsx";
 import { connect } from "react-redux";
 import { usePrivateKey, generateKey } from "../actions.js";
 
-const mapDispatchToProps = (dispatch, ownProps) => ({
+const mapDispatchToProps = dispatch => ({
   usePrivateKey: pk => {
     dispatch(usePrivateKey(pk));
   },
-  generateKey: pk => {
-    dispatch(generateKey(pk));
+  generateKey: () => {
+    dispatch(generateKey());
   }
 });
 
